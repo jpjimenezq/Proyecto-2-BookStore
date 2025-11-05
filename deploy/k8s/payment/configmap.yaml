@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-config
+  namespace: bookstore
+  labels:
+    app: payment
+    component: backend
+data:
+  GRPC_PORT: "50056"
+  HTTP_HEALTH_PORT: "8084"
+  LOG_LEVEL: "INFO"
+  RABBITMQ_URL: "amqp://admin:changeme@rabbitmq:5672/"
+  RABBITMQ_EXCHANGE: "bookstore.events"
+  ORDER_SERVICE_URL: "order:50053"
+  PAYMENT_PROCESSOR: "mock"
+  MOCK_PROCESSOR_LATENCY: "0.5"
+  MOCK_PROCESSOR_MAX_AMOUNT: "100000"
+
+

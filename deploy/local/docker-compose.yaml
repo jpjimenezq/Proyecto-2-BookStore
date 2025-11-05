@@ -1,0 +1,422 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: bookstore-postgres
+    environment:
+      POSTGRES_DB: catalog
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../services/catalog/internal/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookstore -d catalog"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  postgres-order:
+    image: postgres:15-alpine
+    container_name: bookstore-postgres-order
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_order_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookstore -d orderdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  postgres-inventory:
+    image: postgres:15-alpine
+    container_name: bookstore-postgres-inventory
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: bookstore
+      POSTGRES_PASSWORD: changeme
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_inventory_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookstore -d inventorydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  mongo-cart:
+    image: mongo:7.0
+    container_name: bookstore-mongo-cart
+    environment:
+      MONGO_INITDB_DATABASE: cartdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_cart_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  mongo-user:
+    image: mongo:7.0
+    container_name: bookstore-mongo-user
+    environment:
+      MONGO_INITDB_DATABASE: userdb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_user_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  mongo-express-cart:
+    image: mongo-express:latest
+    container_name: bookstore-mongo-express-cart
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo-cart
+      ME_CONFIG_MONGODB_PORT: "27017"
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: changeme
+      ME_CONFIG_SITE_BASEURL: /
+    ports:
+      - "8085:8081"
+    depends_on:
+      mongo-cart:
+        condition: service_healthy
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  mongo-express-user:
+    image: mongo-express:latest
+    container_name: bookstore-mongo-express-user
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo-user
+      ME_CONFIG_MONGODB_PORT: "27017"
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: changeme
+      ME_CONFIG_SITE_BASEURL: /
+    ports:
+      - "8086:8081"
+    depends_on:
+      mongo-user:
+        condition: service_healthy
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: bookstore-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: changeme
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - bookstore-network
+
+  catalog:
+    build:
+      context: ../..
+      dockerfile: services/catalog/Dockerfile
+    container_name: bookstore-catalog
+    environment:
+      SERVICE_NAME: catalog
+      PG_DSN: postgres://bookstore:changeme@postgres:5432/catalog?sslmode=disable
+      RABBITMQ_URL: amqp://admin:changeme@rabbitmq:5672/
+      INVENTORY_SERVICE_URL: inventory:50055
+      GRPC_PORT: 50051
+      HTTP_HEALTH_PORT: 8080
+      LOG_LEVEL: ${CATALOG_LOG_LEVEL:-info}
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  cart:
+    build:
+      context: ../..
+      dockerfile: services/cart/Dockerfile
+    container_name: bookstore-cart
+    environment:
+      SERVICE_NAME: cart
+      MONGO_URI: mongodb://mongo-cart:27017
+      MONGO_DB: cartdb
+      MONGO_TIMEOUT_MS: 5000
+      RABBITMQ_URL: amqp://admin:changeme@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: bookstore.events
+      RABBITMQ_CART_EXCHANGE: cart.events
+      CATALOG_SERVICE_URL: catalog:50051
+      GRPC_PORT: 50052
+      HTTP_HEALTH_PORT: 8081
+      LOG_LEVEL: ${CART_LOG_LEVEL:-INFO}
+    ports:
+      - "50052:50052"
+      - "8081:8081"
+    depends_on:
+      mongo-cart:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  order:
+    build:
+      context: ../..
+      dockerfile: services/order/Dockerfile
+    container_name: bookstore-order
+    environment:
+      SERVICE_NAME: order
+      DATABASE_URL: postgresql+psycopg2://bookstore:changeme@postgres-order:5432/orderdb
+      CATALOG_SERVICE_URL: catalog:50051
+      CART_SERVICE_URL: cart:50052
+      GRPC_PORT: 50053
+      HTTP_HEALTH_PORT: 8082
+      LOG_LEVEL: ${ORDER_LOG_LEVEL:-INFO}
+    ports:
+      - "50053:50053"
+      - "8082:8082"
+    depends_on:
+      postgres-order:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  user:
+    build:
+      context: ../..
+      dockerfile: services/user/Dockerfile
+    container_name: bookstore-user
+    environment:
+      SERVICE_NAME: user
+      NODE_ENV: development
+      PORT: 50054
+      MONGODB_URI: mongodb://mongo-user:27017/userdb
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRATION: 24h
+      GRPC_PORT: 50054
+      LOG_LEVEL: ${USER_LOG_LEVEL:-info}
+    ports:
+      - "50054:50054"
+    depends_on:
+      mongo-user:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 ${GRPC_PORT:-50054}"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  inventory:
+    build:
+      context: ../..
+      dockerfile: services/inventory/Dockerfile
+    container_name: bookstore-inventory
+    environment:
+      SERVICE_NAME: inventory
+      PG_DSN: postgres://bookstore:changeme@postgres-inventory:5432/inventorydb?sslmode=disable
+      RABBITMQ_URL: amqp://admin:changeme@rabbitmq:5672/
+      GRPC_PORT: 50055
+      HTTP_HEALTH_PORT: 8083
+      LOG_LEVEL: ${INVENTORY_LOG_LEVEL:-info}
+    ports:
+      - "50055:50055"
+      - "8083:8083"
+    depends_on:
+      postgres-inventory:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: services/gateway/Dockerfile
+    container_name: bookstore-gateway
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      USER_SERVICE_URL: user:50054
+      ORDER_SERVICE_URL: order:50053
+      CART_SERVICE_URL: cart:50052
+      CATALOG_SERVICE_URL: catalog:50051
+      INVENTORY_SERVICE_URL: inventory:50055
+      PAYMENT_SERVICE_URL: payment:50056
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-24h}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:80,http://localhost:5173}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      LOG_LEVEL: ${GATEWAY_LOG_LEVEL:-info}
+    ports:
+      - "3000:3000"
+    depends_on:
+      catalog:
+        condition: service_healthy
+      cart:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+      user:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  payment:
+    build:
+      context: ../..
+      dockerfile: services/payment/Dockerfile
+    container_name: bookstore-payment
+    environment:
+      # Service config
+      GRPC_PORT: 50056
+      HTTP_HEALTH_PORT: 8084
+      LOG_LEVEL: INFO
+      
+      # RabbitMQ
+      RABBITMQ_URL: amqp://admin:changeme@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: bookstore.events
+      
+      # External services
+      ORDER_SERVICE_URL: order:50053
+      
+      # Payment processor
+      PAYMENT_PROCESSOR: mock
+      MOCK_PROCESSOR_LATENCY: 0.5
+      MOCK_PROCESSOR_MAX_AMOUNT: 100000
+    ports:
+      - "50056:50056"  # gRPC
+      - "8084:8084"    # HTTP health
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8084/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../../services/frontend
+      dockerfile: Dockerfile
+    container_name: bookstore-frontend
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "80:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bookstore-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_order_data:
+    driver: local
+  postgres_inventory_data:
+    driver: local
+  mongo_cart_data:
+    driver: local
+  mongo_user_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  bookstore-network:
+    driver: bridge

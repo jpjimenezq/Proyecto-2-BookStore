@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: bookstore
+  labels:
+    app: catalog
+    service: catalog
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+        service: catalog
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: catalog
+        image: henao13/bookstore-catalog:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: grpc
+          containerPort: 50051
+          protocol: TCP
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: catalog-config
+              key: SERVICE_NAME
+        - name: GRPC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: catalog-config
+              key: GRPC_PORT
+        - name: HTTP_HEALTH_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: catalog-config
+              key: HTTP_HEALTH_PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: catalog-config
+              key: LOG_LEVEL
+        - name: INVENTORY_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: catalog-config
+              key: INVENTORY_SERVICE_URL
+        - name: PG_DSN
+          valueFrom:
+            secretKeyRef:
+              name: catalog-secret
+              key: PG_DSN
+        - name: RABBITMQ_URL
+          valueFrom:
+            secretKeyRef:
+              name: catalog-secret
+              key: RABBITMQ_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+
+
+
+

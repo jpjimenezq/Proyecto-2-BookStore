@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package bookstore.common;
+
+option go_package = "github.com/bookstore/contracts/gen/go/common;common";
+option java_package = "com.bookstore.common";
+option java_multiple_files = true;
+
+// Pagination message for list operations
+message Pagination {
+  int32 page = 1;        // Page number (1-indexed)
+  int32 page_size = 2;   // Number of items per page
+  int32 total = 3;       // Total number of items (response only)
+  int32 total_pages = 4; // Total number of pages (response only)
+}
+
+// Money represents a monetary amount with currency
+message Money {
+  string currency = 1; // ISO 4217 currency code (e.g., "USD", "EUR")
+  int64 amount = 2;    // Amount in smallest currency unit (e.g., cents)
+  int32 decimal_places = 3; // Number of decimal places (default: 2)
+}
+
+// Empty message for requests/responses with no payload
+message Empty {}
+
+// HealthStatus represents the health check response
+message HealthStatus {
+  enum Status {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+    SERVICE_UNKNOWN = 3;
+  }
+  
+  Status status = 1;
+  string service = 2;
+  string version = 3;
+  int64 timestamp = 4; // Unix timestamp
+  map<string, string> details = 5; // Additional health details
+}
+
+// Timestamp helper
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// Error details for standardized error responses
+message ErrorDetail {
+  string code = 1;
+  string message = 2;
+  map<string, string> metadata = 3;
+}
+
+

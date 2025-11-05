@@ -1,0 +1,57 @@
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: user_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - user_mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: user_service
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  mongo_express:
+    image: mongo-express:1.0.0
+    container_name: mongo_express
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: 'true'
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: pass
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+
+  user_app:
+    build: .
+    container_name: user_app
+    ports:
+      - "50052:50052"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/user_service
+      - GRPC_PORT=50052
+      - NODE_ENV=development
+    command: npm start
+
+  user_tests:
+    build: .
+    container_name: user_tests
+    depends_on:
+      - user_app
+    environment:
+      - NODE_ENV=test
+    command: sleep infinity  # Mantener el contenedor corriendo para ejecutar tests manualmente
+    profiles:
+      - test
+
+volumes:
+  user_mongo_data:

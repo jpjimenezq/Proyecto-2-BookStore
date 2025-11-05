@@ -1,0 +1,76 @@
+# Ignorar archivos Markdown excepto README.md de la raíz
+*.md
+!/README.md
+
+# Dependencias de Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Archivos de Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.sum
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+*.log
+
+# Archivos temporales
+*.tmp
+.docker-user.tmp
+*.bak
+*.swp
+*~
+
+# Kubernetes secrets (por seguridad)
+*secret*.yaml
+*secrets*.yaml
+
+# Docker
+.dockerignore
+
+# Archivos de build
+dist/
+build/
+*.zip
+*.tar.gz
+
+# AWS
+.aws/
+eks-config.yaml
+
+# Otros
+.git/

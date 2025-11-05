@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package bookstore.cart;
+
+import "common.proto";
+
+option go_package = "github.com/bookstore/contracts/gen/go/cart;cart";
+option java_package = "com.bookstore.cart";
+option java_multiple_files = true;
+
+// CartItem represents a single item in a shopping cart
+message CartItem {
+  string user_id = 1;                // User identifier
+  string sku = 2;                    // Book SKU
+  int32 qty = 3;                     // Quantity
+  bookstore.common.Money price = 4;  // Price per unit at time of addition
+  string title = 5;                  // Book title (denormalized)
+}
+
+// Cart represents a user's shopping cart
+message Cart {
+  string user_id = 1;                // User identifier
+  repeated CartItem items = 2;       // Cart items
+  int64 updated_at = 3;              // Unix timestamp of last update
+  bookstore.common.Money total = 4;  // Total cart value
+}
+
+// AddItemRequest to add an item to the cart
+message AddItemRequest {
+  string user_id = 1;
+  string sku = 2;
+  int32 qty = 3;
+}
+
+// AddItemResponse contains the updated cart
+message AddItemResponse {
+  Cart cart = 1;
+}
+
+// RemoveItemRequest to remove an item from the cart
+message RemoveItemRequest {
+  string user_id = 1;
+  string sku = 2;
+}
+
+// RemoveItemResponse contains the updated cart
+message RemoveItemResponse {
+  Cart cart = 1;
+}
+
+// GetCartRequest to retrieve a user's cart
+message GetCartRequest {
+  string user_id = 1;
+}
+
+// GetCartResponse contains the user's cart
+message GetCartResponse {
+  Cart cart = 1;
+}
+
+// ClearCartRequest to clear all items from a cart
+message ClearCartRequest {
+  string user_id = 1;
+}
+
+// ClearCartResponse confirms cart was cleared
+message ClearCartResponse {
+  bool success = 1;
+}
+
+// CartService provides operations for managing shopping carts
+service CartService {
+  // Add an item to the cart
+  rpc AddItem(AddItemRequest) returns (AddItemResponse);
+  
+  // Remove an item from the cart
+  rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse);
+  
+  // Get a user's cart
+  rpc GetCart(GetCartRequest) returns (GetCartResponse);
+  
+  // Clear all items from the cart
+  rpc ClearCart(ClearCartRequest) returns (ClearCartResponse);
+  
+  // Health check
+  rpc Health(bookstore.common.Empty) returns (bookstore.common.HealthStatus);
+}
+
+
+
+

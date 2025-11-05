@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bookstore.com/schemas/inventory.events.v1.json",
+  "title": "Inventory Events Schema",
+  "description": "Event schemas for inventory service domain events",
+  "definitions": {
+    "base_event": {
+      "type": "object",
+      "required": ["event_id", "event_type", "event_version", "timestamp"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for this event"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "Type of the event"
+        },
+        "event_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semantic version of event schema"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when event occurred"
+        },
+        "correlation_id": {
+          "type": "string",
+          "description": "Optional correlation ID for tracking related events"
+        }
+      }
+    },
+    "stock_reserved": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "inventory.stock_reserved"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["order_id", "items"],
+              "properties": {
+                "order_id": {
+                  "type": "string",
+                  "description": "Order ID for which stock was reserved"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["item_id", "quantity"],
+                    "properties": {
+                      "item_id": {
+                        "type": "string",
+                        "description": "Item/Product SKU"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Quantity reserved"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stock_released": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "inventory.stock_released"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["order_id", "items"],
+              "properties": {
+                "order_id": {
+                  "type": "string",
+                  "description": "Order ID for which stock was released"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["item_id", "quantity"],
+                    "properties": {
+                      "item_id": {
+                        "type": "string",
+                        "description": "Item/Product SKU"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Quantity released back to stock"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "stock_updated": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "inventory.stock_updated"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["item_id", "previous_quantity", "new_quantity", "delta"],
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "description": "Item/Product SKU"
+                },
+                "previous_quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Quantity before update"
+                },
+                "new_quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Quantity after update"
+                },
+                "delta": {
+                  "type": "integer",
+                  "description": "Change in quantity (can be negative)"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Reason for stock update"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "low_stock_alert": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "inventory.low_stock_alert"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["item_id", "current_quantity", "threshold"],
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "description": "Item/Product SKU"
+                },
+                "current_quantity": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Current stock quantity"
+                },
+                "threshold": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Low stock threshold"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

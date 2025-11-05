@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: cart-mongo
+    environment:
+      MONGO_INITDB_DATABASE: cartdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: cart-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: changeme
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  cart:
+    build:
+      context: ../..
+      dockerfile: services/cart/Dockerfile
+    container_name: cart-service
+    environment:
+      SERVICE_NAME: cart
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: cartdb
+      RABBITMQ_URL: amqp://admin:changeme@rabbitmq:5672/
+      GRPC_PORT: 50052
+      HTTP_HEALTH_PORT: 8081
+      LOG_LEVEL: debug
+    ports:
+      - "50052:50052"
+      - "8081:8081"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  mongo_data:
+  rabbitmq_data:
+
+
+
+

@@ -1,0 +1,48 @@
+# Bookstore Microservices - Complete Kubernetes Deployment
+# Deploy order: namespace → databases → backend services → gateway → frontend
+
+# Step 1: Create namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bookstore
+  labels:
+    name: bookstore
+    environment: production
+
+# Step 2: Deploy databases (PostgreSQL and MongoDB)
+# Use separate files for statefulsets:
+# kubectl apply -f postgres/statefulset.yaml          # catalog DB
+# kubectl apply -f postgres/statefulset-order.yaml    # order DB
+# kubectl apply -f postgres/statefulset-inventory.yaml # inventory DB
+# kubectl apply -f mongo/statefulset-cart.yaml        # cart DB
+# kubectl apply -f mongo/statefulset-user.yaml        # user DB
+
+# Step 3: Deploy RabbitMQ
+# kubectl apply -f rabbitmq/
+
+# Step 4: Deploy backend microservices
+# kubectl apply -f catalog/
+# kubectl apply -f cart/
+# kubectl apply -f inventory/
+# kubectl apply -f order/
+# kubectl apply -f user/
+# kubectl apply -f payment/
+
+# Step 5: Deploy API Gateway
+# kubectl apply -f gateway/
+
+# Step 6: Deploy Frontend
+# kubectl apply -f frontend/
+
+# Quick deploy command:
+# kubectl apply -f namespace.yaml
+# kubectl apply -f postgres/ -f mongo/ -f rabbitmq/
+# Wait for databases to be ready
+# kubectl wait --for=condition=ready pod -l component=database -n bookstore --timeout=300s
+# kubectl apply -f catalog/ -f cart/ -f inventory/ -f order/ -f user/ -f payment/
+# kubectl wait --for=condition=ready pod -l component=backend -n bookstore --timeout=300s
+# kubectl apply -f gateway/ -f frontend/
+
+

@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  namespace: bookstore
+  labels:
+    app: user
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user
+  template:
+    metadata:
+      labels:
+        app: user
+        component: backend
+    spec:
+      containers:
+      - name: user
+        image: henao13/bookstore-user:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50054
+          name: grpc
+          protocol: TCP
+        env:
+        - name: GRPC_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: user-config
+              key: GRPC_PORT
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: user-config
+              key: NODE_ENV
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: user-config
+              key: LOG_LEVEL
+        - name: MONGO_URI
+          valueFrom:
+            configMapKeyRef:
+              name: user-config
+              key: MONGO_URI
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: user-secret
+              key: JWT_SECRET
+        - name: JWT_EXPIRATION
+          valueFrom:
+            configMapKeyRef:
+              name: user-config
+              key: JWT_EXPIRATION
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          tcpSocket:
+            port: 50054
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 50054
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
+
+

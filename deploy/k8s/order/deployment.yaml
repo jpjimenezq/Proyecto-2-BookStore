@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+  namespace: bookstore
+  labels:
+    app: order
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order
+  template:
+    metadata:
+      labels:
+        app: order
+        component: backend
+    spec:
+      containers:
+      - name: order
+        image: henao13/bookstore-order:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50053
+          name: grpc
+          protocol: TCP
+        - containerPort: 8082
+          name: health
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: order-config
+        - secretRef:
+            name: order-secret
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8082
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      restartPolicy: Always
+
+

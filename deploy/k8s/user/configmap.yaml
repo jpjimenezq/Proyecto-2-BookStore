@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-config
+  namespace: bookstore
+  labels:
+    app: user
+    component: backend
+data:
+  JWT_EXPIRATION: 24h
+  LOG_LEVEL: info
+  MONGO_URI: mongodb://mongo:27017/userdb
+  NODE_ENV: production
+  GRPC_PORT: "50054"
+
+

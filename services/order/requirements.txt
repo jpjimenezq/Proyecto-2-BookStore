@@ -1,0 +1,14 @@
+# gRPC
+grpcio>=1.74.0
+grpcio-tools>=1.74.0
+
+# Web framework (health only)
+flask==3.0.0
+gunicorn==21.2.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# CORS (if needed)
+flask-cors==4.0.0

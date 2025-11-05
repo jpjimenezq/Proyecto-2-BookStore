@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package bookstore.catalog;
+
+import "common.proto";
+
+option go_package = "github.com/bookstore/contracts/gen/go/catalog;catalog";
+option java_package = "com.bookstore.catalog";
+option java_multiple_files = true;
+
+// Book represents a book in the catalog
+message Book {
+  string sku = 1;                    // Stock Keeping Unit (unique identifier)
+  string title = 2;                  // Book title
+  string author = 3;                 // Book author
+  bookstore.common.Money price = 4;  // Book price
+  string category = 5;               // Book category (e.g., "fiction", "non-fiction")
+  string description = 6;            // Book description
+  int64 created_at = 7;              // Unix timestamp
+  int64 updated_at = 8;              // Unix timestamp
+  bool active = 9;                   // Whether the book is active in catalog
+  optional int32 stock = 10;         // Read-only: synced from Inventory service
+}
+
+// ListBooksRequest for listing books with pagination and filters
+message ListBooksRequest {
+  bookstore.common.Pagination pagination = 1;
+  string category = 2;               // Filter by category
+  bool active_only = 3;              // Filter only active books
+  string author = 4;                 // Filter by author
+  double min_price = 5;              // Minimum price filter
+  double max_price = 6;              // Maximum price filter
+}
+
+// ListBooksResponse contains the list of books
+message ListBooksResponse {
+  repeated Book books = 1;
+  bookstore.common.Pagination pagination = 2;
+}
+
+// GetBookRequest to retrieve a single book by SKU
+message GetBookRequest {
+  string sku = 1;
+}
+
+// GetBookResponse contains the requested book
+message GetBookResponse {
+  Book book = 1;
+}
+
+// CreateBookRequest to create a new book
+message CreateBookRequest {
+  Book book = 1;
+}
+
+// CreateBookResponse contains the created book
+message CreateBookResponse {
+  Book book = 1;
+}
+
+// UpdateBookRequest to update an existing book
+message UpdateBookRequest {
+  Book book = 1;
+  repeated string update_mask = 2; // Fields to update
+}
+
+// UpdateBookResponse contains the updated book
+message UpdateBookResponse {
+  Book book = 1;
+}
+
+// SearchBooksRequest for full-text search
+message SearchBooksRequest {
+  string query = 1;                  // Search query
+  bookstore.common.Pagination pagination = 2;
+  string category = 3;               // Optional category filter
+}
+
+// SearchBooksResponse contains search results
+message SearchBooksResponse {
+  repeated Book books = 1;
+  bookstore.common.Pagination pagination = 2;
+  float max_score = 3;               // Maximum relevance score
+}
+
+// CatalogService provides operations for managing the book catalog
+service CatalogService {
+  // List books with pagination and filters
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
+  
+  // Get a specific book by SKU
+  rpc GetBook(GetBookRequest) returns (GetBookResponse);
+  
+  // Create a new book in the catalog
+  rpc CreateBook(CreateBookRequest) returns (CreateBookResponse);
+  
+  // Update an existing book
+  rpc UpdateBook(UpdateBookRequest) returns (UpdateBookResponse);
+  
+  // Search books by query
+  rpc SearchBooks(SearchBooksRequest) returns (SearchBooksResponse);
+  
+  // Health check
+  rpc Health(bookstore.common.Empty) returns (bookstore.common.HealthStatus);
+}
+
+
+
+

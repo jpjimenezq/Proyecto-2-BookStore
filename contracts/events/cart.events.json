@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bookstore.com/schemas/cart.events.v1.json",
+  "title": "Cart Events Schema",
+  "description": "Event schemas for cart service domain events",
+  "definitions": {
+    "base_event": {
+      "type": "object",
+      "required": ["event_id", "event_type", "event_version", "timestamp"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for this event"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "Type of the event"
+        },
+        "event_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semantic version of event schema"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when event occurred"
+        },
+        "correlation_id": {
+          "type": "string",
+          "description": "Optional correlation ID for tracking related events"
+        }
+      }
+    },
+    "cart_item_added": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "cart.item_added"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["user_id", "sku", "qty", "price", "currency"],
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "description": "User identifier"
+                },
+                "sku": {
+                  "type": "string",
+                  "description": "Stock Keeping Unit"
+                },
+                "qty": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Quantity added"
+                },
+                "price": {
+                  "type": "integer",
+                  "description": "Price per unit in smallest currency unit"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$",
+                  "description": "ISO 4217 currency code"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Book title"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cart_item_removed": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "cart.item_removed"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["user_id", "sku"],
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "description": "User identifier"
+                },
+                "sku": {
+                  "type": "string",
+                  "description": "Stock Keeping Unit"
+                },
+                "qty": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Remaining quantity after removal (0 if fully removed)"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cart_checkout_requested": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "cart.checkout_requested"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["user_id", "items", "total_amount", "currency"],
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "description": "User identifier"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["sku", "qty", "price"],
+                    "properties": {
+                      "sku": {
+                        "type": "string"
+                      },
+                      "qty": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "price": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "minItems": 1,
+                  "description": "Items in cart at checkout"
+                },
+                "total_amount": {
+                  "type": "integer",
+                  "description": "Total cart value in smallest currency unit"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$",
+                  "description": "ISO 4217 currency code"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cart_cleared": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "cart.cleared"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["user_id"],
+              "properties": {
+                "user_id": {
+                  "type": "string",
+                  "description": "User identifier"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": ["checkout_completed", "user_requested", "expired", "admin_action"],
+                  "description": "Reason for clearing the cart"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/cart_item_added" },
+    { "$ref": "#/definitions/cart_item_removed" },
+    { "$ref": "#/definitions/cart_checkout_requested" },
+    { "$ref": "#/definitions/cart_cleared" }
+  ]
+}
+
+
+
+

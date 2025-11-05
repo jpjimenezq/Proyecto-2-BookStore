@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package bookstore.payment;
+
+option go_package = "github.com/bookstore/contracts/gen/go/payment;payment";
+option java_package = "com.bookstore.payment";
+option java_multiple_files = true;
+
+import "common.proto";
+
+// Payment Service
+service PaymentService {
+  // Health check
+  rpc Health(bookstore.common.Empty) returns (bookstore.common.HealthStatus);
+  
+  // Autorizar pago (reservar fondos)
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse);
+  
+  // Capturar pago autorizado (cobrar)
+  rpc Capture(CaptureRequest) returns (CaptureResponse);
+  
+  // Consultar estado de pago
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+}
+
+// ============================================================================
+// Authorize
+// ============================================================================
+
+message AuthorizeRequest {
+  string order_id = 1;
+  bookstore.common.Money amount = 2;
+  PaymentMethod method = 3;
+  string user_id = 4;
+}
+
+message AuthorizeResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string message = 3;
+}
+
+// ============================================================================
+// Capture
+// ============================================================================
+
+message CaptureRequest {
+  string payment_id = 1;
+}
+
+message CaptureResponse {
+  string payment_id = 1;
+  PaymentStatus status = 2;
+  string message = 3;
+  int64 captured_at = 4;
+}
+
+// ============================================================================
+// GetPayment
+// ============================================================================
+
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentResponse {
+  string payment_id = 1;
+  string order_id = 2;
+  string user_id = 3;
+  bookstore.common.Money amount = 4;
+  PaymentMethod method = 5;
+  PaymentStatus status = 6;
+  int64 created_at = 7;
+  int64 captured_at = 8;
+}
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+message PaymentMethod {
+  PaymentMethodType type = 1;
+  string last4 = 2;          // Últimos 4 dígitos
+  string token = 3;          // Token del procesador
+}
+
+enum PaymentMethodType {
+  PAYMENT_METHOD_TYPE_UNSPECIFIED = 0;
+  CREDIT_CARD = 1;
+  DEBIT_CARD = 2;
+  PAYPAL = 3;
+  BANK_TRANSFER = 4;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  AUTHORIZED = 2;
+  CAPTURED = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+}

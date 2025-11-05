@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: bookstore
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus,rabbitmq_shovel,rabbitmq_shovel_management].
+  rabbitmq.conf: |
+    # Default user
+    default_user = admin
+    default_pass = changeme
+    
+    # Networking
+    listeners.tcp.default = 5672
+    management.tcp.port = 15672
+    
+    # Memory and disk limits
+    vm_memory_high_watermark.relative = 0.6
+    disk_free_limit.absolute = 2GB
+    
+    # Cluster settings
+    cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
+    cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+    cluster_formation.k8s.address_type = hostname
+    
+    # Queue settings
+    queue_master_locator = min-masters
+
+
+
+

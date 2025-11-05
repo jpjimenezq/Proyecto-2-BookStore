@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+  namespace: bookstore
+data:
+  MONGO_INITDB_DATABASE: bookstore
+  MONGO_INITDB_ROOT_USERNAME: admin
+  # Init script for cart database
+  init-mongo.js: |
+    // Switch to cart database
+    db = db.getSiblingDB('cart');
+    
+    // Create cart collection
+    db.createCollection('carts');
+    
+    // Create indexes
+    db.carts.createIndex({ user_id: 1 }, { unique: true });
+    db.carts.createIndex({ updated_at: 1 });
+    db.carts.createIndex({ "items.sku": 1 });
+    
+    // Create TTL index for cart expiration (expire after 30 days of inactivity)
+    db.carts.createIndex({ updated_at: 1 }, { expireAfterSeconds: 2592000 });
+    
+    // Create cart_events collection for event sourcing
+    db.createCollection('cart_events');
+    db.cart_events.createIndex({ user_id: 1, timestamp: -1 });
+    db.cart_events.createIndex({ event_type: 1 });
+    db.cart_events.createIndex({ event_id: 1 }, { unique: true });
+    
+    // Create bookstore user with read/write access
+    db.createUser({
+      user: 'bookstore',
+      pwd: 'changeme',
+      roles: [
+        {
+          role: 'readWrite',
+          db: 'cart'
+        }
+      ]
+    });
+    
+    print('MongoDB initialization completed for cart database');
+
+
+
+
+

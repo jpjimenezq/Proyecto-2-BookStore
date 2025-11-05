@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cart-config
+  namespace: bookstore
+  labels:
+    app: cart
+    service: cart
+data:
+  SERVICE_NAME: "cart"
+  GRPC_PORT: "50052"
+  HTTP_HEALTH_PORT: "8081"
+  LOG_LEVEL: "info"
+  MONGO_DB: "cartdb"
+  MONGO_TIMEOUT_MS: "5000"
+  RABBITMQ_EXCHANGE: "bookstore.events"
+  RABBITMQ_CART_EXCHANGE: "cart.events"
+  RABBITMQ_PREFETCH_COUNT: "10"
+  RABBITMQ_RETRY_MAX_ATTEMPTS: "3"
+  EVENT_TTL_SECONDS: "86400"
+
+
+
+

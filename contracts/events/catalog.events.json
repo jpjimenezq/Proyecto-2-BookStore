@@ -1,0 +1,178 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bookstore.com/schemas/catalog.events.v1.json",
+  "title": "Catalog Events Schema",
+  "description": "Event schemas for catalog service domain events",
+  "definitions": {
+    "base_event": {
+      "type": "object",
+      "required": ["event_id", "event_type", "event_version", "timestamp"],
+      "properties": {
+        "event_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for this event"
+        },
+        "event_type": {
+          "type": "string",
+          "description": "Type of the event"
+        },
+        "event_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semantic version of event schema"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when event occurred"
+        },
+        "correlation_id": {
+          "type": "string",
+          "description": "Optional correlation ID for tracking related events"
+        }
+      }
+    },
+    "catalog_created": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "catalog.created"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["sku", "title", "author", "price", "currency", "category"],
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "description": "Stock Keeping Unit"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Book title"
+                },
+                "author": {
+                  "type": "string",
+                  "description": "Book author"
+                },
+                "price": {
+                  "type": "integer",
+                  "description": "Price in smallest currency unit"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$",
+                  "description": "ISO 4217 currency code"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Book category"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Book description"
+                },
+                "active": {
+                  "type": "boolean",
+                  "description": "Whether book is active"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "catalog_updated": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "catalog.updated"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["sku", "fields_changed"],
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "description": "Stock Keeping Unit"
+                },
+                "fields_changed": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["title", "author", "price", "currency", "category", "description", "active"]
+                  },
+                  "minItems": 1,
+                  "description": "List of fields that were updated"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "author": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "integer"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "active": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "catalog_deleted": {
+      "allOf": [
+        { "$ref": "#/definitions/base_event" },
+        {
+          "type": "object",
+          "required": ["payload"],
+          "properties": {
+            "event_type": {
+              "const": "catalog.deleted"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["sku"],
+              "properties": {
+                "sku": {
+                  "type": "string",
+                  "description": "Stock Keeping Unit"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/catalog_created" },
+    { "$ref": "#/definitions/catalog_updated" },
+    { "$ref": "#/definitions/catalog_deleted" }
+  ]
+}
+
+
+
+

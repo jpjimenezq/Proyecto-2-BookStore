@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: bookstore
+data:
+  POSTGRES_DB: bookstore
+  POSTGRES_USER: bookstore
+  # Init scripts
+  init-catalog-db.sql: |
+    -- Create catalog database
+    CREATE DATABASE catalog;
+    GRANT ALL PRIVILEGES ON DATABASE catalog TO bookstore;
+    
+    -- Connect to catalog database
+    \c catalog;
+    
+    -- Create books table
+    CREATE TABLE IF NOT EXISTS books (
+      sku VARCHAR(50) PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      author VARCHAR(255) NOT NULL,
+      price BIGINT NOT NULL,
+      currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+      category VARCHAR(100),
+      description TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      active BOOLEAN NOT NULL DEFAULT true,
+      stock INTEGER DEFAULT 0
+    );
+    
+    -- Create indexes
+    CREATE INDEX idx_books_category ON books(category);
+    CREATE INDEX idx_books_author ON books(author);
+    CREATE INDEX idx_books_active ON books(active);
+    CREATE INDEX idx_books_created_at ON books(created_at);
+    
+    -- Create full-text search index
+    CREATE INDEX idx_books_title_search ON books USING gin(to_tsvector('english', title));
+    CREATE INDEX idx_books_author_search ON books USING gin(to_tsvector('english', author));
+
+
+
+
