@@ -35,6 +35,47 @@ Este proyecto implementa una arquitectura de microservicios completa con dos tip
 └────────┘  └─────────┘  └──────────┘
 ```
 
+## Decisiones de Diseño y Justificación Técnica
+
+### Elección de Lenguajes por Servicio
+
+#### **Go (Catalog, Inventory)**
+**Razones:**
+- **Performance crítico**: Estos servicios manejan el catálogo y stock, operaciones de alta frecuencia
+- **Concurrencia nativa**: Go routines ideales para manejar múltiples requests gRPC simultáneamente
+- **Ecosystem gRPC**: Excelente soporte nativo para Protocol Buffers y gRPC
+
+#### **Python (Cart, Order, Payment)**
+**Razones:**
+- **Lógica de negocio compleja**: Cálculos de precios, validaciones de órdenes, reglas de negocio
+- **Prototipado rápido**: Ideal para lógica de negocio que cambia frecuentemente
+
+#### **Node.js (User, Gateway)**
+**Razones:**
+- **I/O intensivo**: Gateway maneja muchas conexiones simultáneas sin bloqueo
+- **Event-driven**: Arquitectura natural para proxy/gateway patterns
+- **JSON nativo**: Manejo eficiente de JWT y payloads REST
+- **Ecosystem HTTP**: Express.js, middleware de autenticación
+- **Single language stack**: Facilita el desarrollo fullstack
+
+### Elección de Persistencia por Servicio
+
+#### **PostgreSQL (Catalog, Order, User, Inventory)**
+**Razones:**
+- **Transacciones**: Operaciones como crear orden + reservar inventario deben ser atómicas
+- **Consultas SQL complejas**: Búsquedas con filtros, paginación, agregaciones
+
+#### **MongoDB (Cart)**
+**Razones:**
+- **Documentos anidados**: Carrito como documento con array de items
+- **Escrituras frecuentes**: Agregar/quitar items es muy frecuente, MongoDB optimizado para writes
+
+#### **Sin BD (Payment, Gateway)**
+**Razones:**
+- **Delegacion**: Payment delega a gateways externos, no almacena datos sensibles
+- **Gateway como proxy**: Solo traduce requests, no mantiene estado
+- **Escalabilidad**: Servicios sin estado se escalan horizontalmente sin problemas
+
 ## Tipos de Comunicación
 
 ### Comunicación Síncrona (gRPC)
